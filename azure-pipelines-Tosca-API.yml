@@ -22,7 +22,7 @@ stages:
         inputs:
           filePath: $(System.DefaultWorkingDirectory)\tosca_cloud_executionclient.ps1
           arguments: >
-            -TokenUrl "$(ToscaAuthURL)"
+            -TokenUrl "$(TokenUrl)"
             -ClientId "$(ToscaClientId)"
             -ClientSecret "$(ToscaClientSecret)"
             -Scope "tta"
