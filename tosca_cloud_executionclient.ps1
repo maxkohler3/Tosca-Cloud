@@ -3,7 +3,7 @@
     -ClientId "Tricentis_Cloud_API" `
     -ClientSecret $env:TOSCA_CLIENT_SECRET `
     -Scope "tta" `
-    -TenantBaseUrl "https://amspresales.my.tricentis.com/72548120-3e17-4758-8c12-b75bb448d443" `
+    -TenantBaseUrl "https://amspresales.my.tricentis.com/8955895b-cacf-4695-a1bb-1210863f6212" `
     -PlaylistConfigFilePath "PlaylistConfig.json" `
     -ResultsFileName "results.xml" `
     -ResultsFolderPath "C:\Tricentis\Tosca\Results" `
@@ -304,4 +304,5 @@ else {
     exit 1
 
 }
+
 
