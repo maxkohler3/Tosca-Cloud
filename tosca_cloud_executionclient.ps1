@@ -1,13 +1,13 @@
-pwsh ./Invoke-ToscaCloudPlaylist.ps1 `
-	-TokenUrl "https://amspresales.okta.com/oauth2/default/v1/token" `
-	-ClientId "Tricentis_Cloud_API" `
-	-ClientSecret "xAIyVGZHX3yMw3FtMCV4oLtBmAETfdpJJOY-x4MbdTAq1aaUeZC6jZqblzgSv6VD" `
-	-Scope "tta" `
-	-TenantBaseUrl "https://amspresales.my.tricentis.com/8955895b-cacf-4695-a1bb-1210863f6212" `
-	-PlaylistConfigFilePath "PlaylistConfig.json" `
-	-ResultsFileName "results.xml" `
-	-ResultsFolderPath "C:\Tricentis\Tosca\Results" `
-	-VerboseMode
+  pwsh ./Invoke-ToscaCloudPlaylist.ps1 `
+    -TokenUrl "https://amspresales.okta.com/oauth2/default/v1/token" `
+    -ClientId "Tricentis_Cloud_API" `
+    -ClientSecret $env:TOSCA_CLIENT_SECRET `
+    -Scope "tta" `
+    -TenantBaseUrl "https://amspresales.my.tricentis.com/72548120-3e17-4758-8c12-b75bb448d443" `
+    -PlaylistConfigFilePath "PlaylistConfig.json" `
+    -ResultsFileName "results.xml" `
+    -ResultsFolderPath "C:\Tricentis\Tosca\Results" `
+    -VerboseMode
 
 [CmdletBinding()]
 param(
@@ -304,3 +304,4 @@ else {
     exit 1
 
 }
+
