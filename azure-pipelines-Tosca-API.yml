@@ -28,7 +28,7 @@ stages:
             -Scope "tta"
             -TenantBaseUrl "https://$(ToscaTenant).my.tricentis.com"
             -SpaceId "$(ToscaWorkspaceID)"
-            -PlaylistName "Regression - Web To Lead"
+            -PlaylistName "TC1 Web Test"
             -ResultsFileName "results.xml"
             -ResultsFolderPath "C:\Tricentis\Tosca\Results"
             -VerboseMode
