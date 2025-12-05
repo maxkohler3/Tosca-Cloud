@@ -6,6 +6,13 @@
 trigger:
 - main
 
+variables:
+  ToscaAuthURL: 'https://amspresales.my.tricentis.com/8955895b-cacf-4695-a1bb-1210863f6212'
+  ToscaClientId: 'Tricentis_Cloud_API'
+  ToscaClientSecret: 'xAIyVGZHX3yMw3FtMCV4oLtBmAETfdpJJOY-x4MbdTAq1aaUeZC6jZqblzgSv6VD'  # Still use pipeline variable for secrets
+  ToscaTenant: 'amspresales'
+  ToscaWorkspaceID: '8955895b-cacf-4695-a1bb-1210863f6212'
+
 stages:
 
 - stage: Test
