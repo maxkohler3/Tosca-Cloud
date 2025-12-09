@@ -7,7 +7,7 @@ pool:
 variables:
   # Prefer a variable group or pipeline variables; mark CLIENT_SECRET as secret.
   CLIENT_ID: Tricentis_Cloud_API
-  CLIENT_SECRET: $(CLIENT_SECRET)        # define as secret in the pipeline UI/library
+  CLIENT_SECRET: xAIyVGZHX3yMw3FtMCV4oLtBmAETfdpJJOY-x4MbdTAq1aaUeZC6jZqblzgSv6VD        # define as secret in the pipeline UI/library
   E2G_SCOPE: tta
   E2G_AUTH_URL: https://amspresales.okta.com/oauth2/default/v1/token
   TOSCA_CLOUD_URL: https://amspresales.my.tricentis.com/8955895b-cacf-4695-a1bb-1210863f6212
