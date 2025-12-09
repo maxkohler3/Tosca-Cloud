@@ -7,11 +7,11 @@ pool:
 variables:
   # Prefer a variable group or pipeline variables; mark CLIENT_SECRET as secret.
   CLIENT_ID: Tricentis_Cloud_API
-  CLIENT_SECRET: xAIyVGZHX3yMw3FtMCV4oLtBmAETfdpJJOY-x4MbdTAq1aaUeZC6jZqblzgSv6VD        # define as secret in the pipeline UI/library
+  CLIENT_SECRET: qWofWKsmVxN_Cpp2nVxdiBIBO2-f49IEA2hubs3mQiNUWpnrTrTdG0Ferj74JZR0        # define as secret in the pipeline UI/library
   E2G_SCOPE: tta
-  E2G_AUTH_URL: https://amspresales.okta.com/oauth2/default/v1/token
-  TOSCA_CLOUD_URL: https://amspresales.my.tricentis.com/8955895b-cacf-4695-a1bb-1210863f6212
-  PLAYLIST_ID: 4bc36487-a918-47aa-b3fa-aabebd16abbf
+  E2G_AUTH_URL: https://presales.okta.com/oauth2/default/v1/token
+  TOSCA_CLOUD_URL: https://presales.my.tricentis.com/5f1a8ab8-a188-4cb6-97b5-cc9b1cbe03d9
+  PLAYLIST_ID: dd3722ab-d4d8-4624-818e-c0a9c38cb265
 
 stages:
 - stage: RunPlaylist
