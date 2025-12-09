@@ -2,7 +2,7 @@ trigger:
 - main  # adjust as needed
 
 pool:
-  vmImage: windows-latest
+  name: Default
 
 variables:
   # Prefer a variable group or pipeline variables; mark CLIENT_SECRET as secret.
