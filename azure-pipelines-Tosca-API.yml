@@ -5,12 +5,13 @@ pool:
   name: Default
 
 variables:
-  CLIENT_ID: $(client_id)
-  CLIENT_SECRET: $(client_secret)        # define as secret in the pipeline UI/library
-  E2G_SCOPE: tta
-  E2G_AUTH_URL: $(auth_url)
-  TOSCA_CLOUD_URL: $(cloud_url)
-  PLAYLIST_ID: $(tc1_playlist_id)
+- group: presales-tosca-cloud
+#   CLIENT_ID: Tricentis_Cloud_API
+#   CLIENT_SECRET: qWofWKsmVxN_Cpp2nVxdiBIBO2-f49IEA2hubs3mQiNUWpnrTrTdG0Ferj74JZR0        # define as secret in the pipeline UI/library
+#   E2G_SCOPE: tta
+#   E2G_AUTH_URL: https://presales.okta.com/oauth2/default/v1/token
+#   TOSCA_CLOUD_URL: https://presales.my.tricentis.com/5f1a8ab8-a188-4cb6-97b5-cc9b1cbe03d9
+#   PLAYLIST_ID: dd3722ab-d4d8-4624-818e-c0a9c38cb265
 
 stages:
 - stage: RunPlaylist
