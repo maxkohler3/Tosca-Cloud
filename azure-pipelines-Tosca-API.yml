@@ -1,62 +1,278 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-
 trigger:
-- main
+- main  # adjust as needed
+
+pool:
+  vmImage: windows-latest
 
 variables:
-  ToscaAuthURL: 'https://amspresales.my.tricentis.com/8955895b-cacf-4695-a1bb-1210863f6212'
-  ToscaClientId: 'Tricentis_Cloud_API'
-  ToscaClientSecret: 'xAIyVGZHX3yMw3FtMCV4oLtBmAETfdpJJOY-x4MbdTAq1aaUeZC6jZqblzgSv6VD'  # Still use pipeline variable for secrets
-  ToscaTenant: 'amspresales'
-  ToscaWorkspaceID: '8955895b-cacf-4695-a1bb-1210863f6212'
+  # Prefer a variable group or pipeline variables; mark CLIENT_SECRET as secret.
+  CLIENT_ID: Tricentis_Cloud_API
+  CLIENT_SECRET: $(CLIENT_SECRET)        # define as secret in the pipeline UI/library
+  E2G_SCOPE: tta
+  E2G_AUTH_URL: https://amspresales.okta.com/oauth2/default/v1/token
+  TOSCA_CLOUD_URL: https://amspresales.my.tricentis.com/8955895b-cacf-4695-a1bb-1210863f6212
+  PLAYLIST_ID: 4bc36487-a918-47aa-b3fa-aabebd16abbf
 
 stages:
-
-- stage: Test
-  displayName: Test
+- stage: RunPlaylist
+  displayName: Run Tosca Cloud Playlist
   jobs:
-    - job: Test
-      pool:
-        name: Default
-      steps:
-      - script: echo Test
-        displayName: 'Prepare Testing'
+  - job: Execute
+    displayName: Execute and Collect Results
+    steps:
+    - task: PowerShell@2
+      displayName: Get Token
+      inputs:
+        targetType: inline
+        script: |
+          $headers = @{ "Content-Type" = "application/x-www-form-urlencoded" }
+          $Body = "client_id=$env:CLIENT_ID&client_secret=$env:CLIENT_SECRET&scope=$env:E2G_SCOPE&grant_type=client_credentials"
 
-      - task: PowerShell@2
-        inputs:
-          filePath: $(System.DefaultWorkingDirectory)\tosca_cloud_executionclient.ps1
-          arguments: >
-            -TokenUrl "$(ToscaAuthURL)"
-            -ClientId "$(ToscaClientId)"
-            -ClientSecret "$(ToscaClientSecret)"
-            -Scope "tta"
-            -TenantBaseUrl "https://$(ToscaTenant).my.tricentis.com"
-            -SpaceId "$(ToscaWorkspaceID)"
-            -PlaylistName "TC1 Web Test"
-            -ResultsFileName "results.xml"
-            -ResultsFolderPath "C:\Tricentis\Tosca\Results"
-            -VerboseMode
-        displayName: 'Execute Tosca Cloud Playlist and Upload Results'
+          $maxRetries = 3
+          $retryCount = 0
+          $success = $false
 
+          do {
+              try {
+                  Write-Host "=== TOKEN ACQUISITION API CALL ==="
+                  $response = Invoke-RestMethod -Uri "$env:E2G_AUTH_URL" -Method Post -Headers $headers -Body $Body
+                  $accessToken = $response.access_token
+                  $success = $true
+                  Write-Host "Token acquired successfully."
+              }
+              catch {
+                  $retryCount++
+                  Write-Host "Token acquisition failed (attempt $retryCount of $maxRetries)"
 
-  
-      - task: PowerShell@2
-        displayName: 'Convert JUnit results to UTF-8'
-        condition: always()
-        inputs:
-          targetType: 'inline'
-          script: |
-            $source = "C:\Tricentis\Tosca\Results\results.xml"
-            $dest = "C:\Tricentis\Tosca\Results\results_utf8.xml"
-            [IO.File]::WriteAllText($dest, (Get-Content -Raw $source), [Text.Encoding]::UTF8)
+                  $statusCode = $_.Exception.Response.StatusCode.value__
+                  $statusDescription = $_.Exception.Response.StatusDescription
+                  Write-Host "Status Code: $statusCode"
+                  Write-Host "Status Description: $statusDescription"
 
+                  try {
+                      $streamReader = [System.IO.StreamReader]::new($_.Exception.Response.GetResponseStream())
+                      $errorBody = $streamReader.ReadToEnd()
+                      $streamReader.Close()
+                      Write-Host "Error Response Body: $errorBody"
+                  }
+                  catch {
+                      Write-Host "Could not read error response body"
+                  }
 
-      - task: PublishTestResults@2
-        displayName: 'Publish Test Results'
-        condition: always()
-        inputs:
-          testResultsFiles: 'C:\Tricentis\Tosca\Results\results_utf8.xml'
-          testResultsFormat: 'JUnit'
+                  if ($retryCount -lt $maxRetries) {
+                      Start-Sleep -Seconds 5
+                  }
+              }
+          } while (-not $success -and $retryCount -lt $maxRetries)
+
+          if (-not $success) { throw "Failed to acquire token after $maxRetries attempts" }
+
+          # Save token for later steps
+          $accessToken | Out-File -FilePath "$(Pipeline.Workspace)\access_token.txt" -Encoding UTF8
+
+    - task: PowerShell@2
+      displayName: Run Tests (trigger playlist)
+      inputs:
+        targetType: inline
+        script: |
+          $accessToken = Get-Content -Path "$(Pipeline.Workspace)\access_token.txt" -Raw
+          $accessToken = $accessToken.Trim()
+
+          function StartPlaylistExecution {
+              param(
+                  [string]$AccessToken,
+                  [string]$TtaUrl,
+                  [string]$PlaylistId
+              )
+              try {
+                  $headers = @{
+                      "Authorization" = "Bearer $AccessToken"
+                      "Content-Type" = "application/json"
+                      "Accept" = "application/json"
+                  }
+
+                  $body = @{
+                      "playlistId" = $PlaylistId
+                      "private"   = $false
+                  } | ConvertTo-Json
+
+                  Write-Host "=== RUN PLAYLIST API CALL ==="
+                  $fullUrl = "$env:TOSCA_CLOUD_URL/_playlists/api/v2/playlistRuns/"
+                  Write-Host "Calling: $fullUrl"
+
+                  $response = Invoke-RestMethod -Uri $fullUrl -Method Post -Headers $headers -Body $body
+
+                  if ($response.executionId) { return $response.executionId }
+                  elseif ($response.id) { return $response.id }
+                  else { throw "No execution ID returned." }
+              }
+              catch {
+                  Write-Error "Execution failed: $($_.Exception.Message)"
+                  throw
+              }
+          }
+
+          $executionId = StartPlaylistExecution $accessToken $env:TOSCA_CLOUD_URL $env:PLAYLIST_ID
+          Write-Host "Execution triggered. ID: $executionId"
+
+          $executionId | Out-File -FilePath "$(Pipeline.Workspace)\execution_id.txt" -Encoding UTF8
+
+    - task: PowerShell@2
+      displayName: Wait for Results
+      inputs:
+        targetType: inline
+        script: |
+          $accessToken = Get-Content -Path "$(Pipeline.Workspace)\access_token.txt" -Raw
+          $accessToken = $accessToken.Trim()
+          $executionId = Get-Content -Path "$(Pipeline.Workspace)\execution_id.txt" -Raw
+          $executionId = $executionId.Trim()
+
+          function WaitForExecution {
+              param(
+                  [Parameter(Mandatory=$true)][string]$AccessToken,
+                  [Parameter(Mandatory=$true)][string]$TtaUrl,
+                  [Parameter(Mandatory=$true)][string]$ExecutionId,
+                  [int]$TimeoutMinutes = 120,
+                  [int]$PollingIntervalSeconds = 30
+              )
+              try {
+                  $headers = @{
+                      "Authorization" = "Bearer $AccessToken"
+                      "Content-Type" = "application/json"
+                  }
+
+                  $startTime = Get-Date
+                  $timeoutTime = $startTime.AddMinutes($TimeoutMinutes)
+
+                  do {
+                      $fullUrl = "$env:TOSCA_CLOUD_URL/_playlists/api/v2/playlistRuns/$ExecutionId"
+                      Write-Host "=== PLAYLIST RUN STATUS CHECK API CALL ==="
+                      Write-Host "Calling: $fullUrl"
+
+                      $response = Invoke-RestMethod -Uri $fullUrl -Method Get -Headers $headers
+                      $status = $response.state
+
+                      if ($status -eq "Completed" -or $status -eq "Succeeded") {
+                          Write-Host "Execution finished with status: Succeeded"
+                          return "succeeded"
+                      }
+
+                      if ($status -eq "Failed") {
+                          Write-Host "Execution finished with status: Failed"
+                          return "failed"
+                      }
+
+                      if ($status -eq "Cancelled" -or $status -eq "Canceled" -or $status -eq "Canceling") {
+                          Write-Host "Execution was cancelled"
+                          return "canceled"
+                      }
+
+                      if ((Get-Date) -gt $timeoutTime) {
+                          Write-Host "Execution timed out after $TimeoutMinutes minutes"
+                          return $null
+                      }
+
+                      Write-Host "Execution still running. Waiting $PollingIntervalSeconds seconds before next check..."
+                      Start-Sleep -Seconds $PollingIntervalSeconds
+
+                  } while ($status -eq "Running" -or $status -eq "Queued" -or $status -eq "Pending" -or $status -eq "Starting")
+
+                  return $status
+              }
+              catch {
+                  Write-Error "Failed to wait for execution: $($_.Exception.Message)"
+                  throw
+              }
+          }
+
+          $currentState = WaitForExecution $accessToken $env:TOSCA_CLOUD_URL $executionId
+
+          if ($currentState -eq $null) { throw "Execution timed out" }
+          if ($currentState -eq 'Canceling' -or $currentState -eq 'Canceled') { throw "Execution Canceled" }
+
+          Write-Host "Test execution completed with state: $currentState"
+          $currentState | Out-File -FilePath "$(Pipeline.Workspace)\test_state.txt" -Encoding UTF8
+
+          if ($currentState -ne 'succeeded') {
+              throw "Playlist run did not succeed (state: $currentState)"
+          }
+
+    - task: PowerShell@2
+      displayName: Get JUnit Results
+      inputs:
+        targetType: inline
+        script: |
+          $accessToken = Get-Content -Path "$(Pipeline.Workspace)\access_token.txt" -Raw
+          $accessToken = $accessToken.Trim()
+          $executionId = Get-Content -Path "$(Pipeline.Workspace)\execution_id.txt" -Raw
+          $executionId = $executionId.Trim()
+
+          function GetJUnitResults {
+              param(
+                  [Parameter(Mandatory=$true)][string]$AccessToken,
+                  [Parameter(Mandatory=$true)][string]$TtaUrl,
+                  [Parameter(Mandatory=$true)][string]$ExecutionId
+              )
+              try {
+                  $headers = @{
+                      "Authorization" = "Bearer $AccessToken"
+                      "Accept" = "application/xml"
+                  }
+
+                  $fullUrl = "$env:TOSCA_CLOUD_URL/_playlists/api/v2/playlistRuns/$ExecutionId/junit"
+                  Write-Host "=== JUNIT RESULTS API CALL ==="
+                  Write-Host "Calling: $fullUrl"
+                  Write-Host "---------------------------------"
+
+                  $response = Invoke-RestMethod -Uri $fullUrl -Method Get -Headers $headers
+
+                  $junitXml = $response.OuterXml
+                  $junitXml | Out-File -FilePath "$(Pipeline.Workspace)\junit-results.xml" -Encoding UTF8
+                  Write-Host "JUnit results saved to junit-results.xml"
+
+                  $xmlDoc = [xml]$junitXml
+                  $testsuites = $xmlDoc.testsuites
+
+                  Write-Host "=== JUNIT RESULTS SUMMARY ==="
+                  Write-Host "Playlist: $($testsuites.name)"
+                  Write-Host "Total Tests: $($testsuites.tests)"
+                  Write-Host "Failures: $($testsuites.failures)"
+                  Write-Host "Errors: $($testsuites.errors)"
+                  Write-Host "Disabled: $($testsuites.disabled)"
+                  Write-Host "---------------------------------"
+
+                  $testcases = $xmlDoc.SelectNodes("//testcase")
+                  Write-Host "=== INDIVIDUAL TEST CASES RESULT==="
+                  foreach ($testcase in $testcases) {
+                      $status = "Succeeded"
+                      $failureElements = $testcase.SelectNodes("failure")
+                      if ($failureElements.Count -gt 0) { $status = "Failed" }
+                      Write-Host "$($testcase.name): $status"
+                  }
+
+                  return $junitXml
+              }
+              catch {
+                  Write-Error "Failed to get JUnit results: $($_.Exception.Message)"
+                  throw
+              }
+          }
+
+          GetJUnitResults $accessToken $env:TOSCA_CLOUD_URL $executionId
+          Write-Host "---------------------------------"
+          Write-Host "JUnit results retrieved successfully"
+
+    - task: PublishTestResults@2
+      displayName: Publish JUnit Results
+      condition: succeededOrFailed()
+      inputs:
+        testResultsFormat: JUnit
+        testResultsFiles: '$(Pipeline.Workspace)/junit-results.xml'
+        failTaskOnFailedTests: true
+
+    - task: PublishBuildArtifacts@1
+      displayName: Publish JUnit Artifact
+      condition: succeededOrFailed()
+      inputs:
+        PathtoPublish: '$(Pipeline.Workspace)/junit-results.xml'
+        ArtifactName: junit-results
