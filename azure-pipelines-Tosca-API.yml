@@ -305,4 +305,3 @@ stages:
               Write-Host "Sending Base64 encoded results to Pulse..."
               Invoke-RestMethod -Uri $webhookUrl -Method Post -Headers $headers -Body $jsonBody
           }
-          }
