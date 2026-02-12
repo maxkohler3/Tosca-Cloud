@@ -279,7 +279,7 @@ stages:
         
     - task: PowerShell@2
       displayName: 'Send Results to qTest Pulse'
-      condition: succeededOrFailed() # Ensures results are sent even if tests fail
+      condition: succeededOrFailed()
       inputs:
         targetType: inline
         script: |
@@ -287,25 +287,22 @@ stages:
           $webhookUrl = "https://pulse-7.qtestnet.com/webhook/9e627443-0be9-4dfc-8a60-a6179ffcba9d"
 
           if (Test-Path $xmlPath) {
-              Write-Host "Reading JUnit results from $xmlPath"
               $xmlContent = Get-Content -Path $xmlPath -Raw
               
-              $headers = @{
-                  "Content-Type" = "application/xml"
-              }
+              # Base64 encode the XML content as the Pulse script expects
+              $bytes = [System.Text.Encoding]::UTF8.GetBytes($xmlContent)
+              $encodedXml = [Convert]::ToBase64String($bytes)
 
-              Write-Host "Sending results to qTest Pulse Webhook..."
-              try {
-                  $response = Invoke-RestMethod -Uri $webhookUrl -Method Post -Headers $headers -Body $xmlContent
-                  Write-Host "Successfully sent to Pulse. Response:"
-                  Write-Host ($response | ConvertTo-Json)
-              }
-              catch {
-                  Write-Error "Failed to send results to Pulse: $($_.Exception.Message)"
-                  # We don't necessarily want to fail the whole pipeline if the webhook fails, 
-                  # but you can add 'throw' here if you do.
-              }
+              # Construct the JSON payload with the 'result' property
+              $jsonBody = @{
+                  result = $encodedXml
+                  projectId = "137720"  # Replace with your qTest Project ID
+                  testcycle = "6712697"  # Replace with your qTest Test Cycle ID
+              } | ConvertTo-Json
+
+              $headers = @{ "Content-Type" = "application/json" }
+
+              Write-Host "Sending Base64 encoded results to Pulse..."
+              Invoke-RestMethod -Uri $webhookUrl -Method Post -Headers $headers -Body $jsonBody
           }
-          else {
-              Write-Warning "JUnit result file not found. Skipping Pulse notification."
           }
