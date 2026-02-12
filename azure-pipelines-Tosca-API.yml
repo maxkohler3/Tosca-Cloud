@@ -276,3 +276,36 @@ stages:
       inputs:
         PathtoPublish: '$(Pipeline.Workspace)/junit-results.xml'
         ArtifactName: junit-results
+        
+    - task: PowerShell@2
+      displayName: 'Send Results to qTest Pulse'
+      condition: succeededOrFailed() # Ensures results are sent even if tests fail
+      inputs:
+        targetType: inline
+        script: |
+          $xmlPath = "$(Pipeline.Workspace)\junit-results.xml"
+          $webhookUrl = "https://pulse-7.qtestnet.com/webhook/9e627443-0be9-4dfc-8a60-a6179ffcba9d"
+
+          if (Test-Path $xmlPath) {
+              Write-Host "Reading JUnit results from $xmlPath"
+              $xmlContent = Get-Content -Path $xmlPath -Raw
+              
+              $headers = @{
+                  "Content-Type" = "application/xml"
+              }
+
+              Write-Host "Sending results to qTest Pulse Webhook..."
+              try {
+                  $response = Invoke-RestMethod -Uri $webhookUrl -Method Post -Headers $headers -Body $xmlContent
+                  Write-Host "Successfully sent to Pulse. Response:"
+                  Write-Host ($response | ConvertTo-Json)
+              }
+              catch {
+                  Write-Error "Failed to send results to Pulse: $($_.Exception.Message)"
+                  # We don't necessarily want to fail the whole pipeline if the webhook fails, 
+                  # but you can add 'throw' here if you do.
+              }
+          }
+          else {
+              Write-Warning "JUnit result file not found. Skipping Pulse notification."
+          }
