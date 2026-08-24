@@ -7,7 +7,7 @@ pool:
 variables:
 - group: presales-tosca-cloud
 #   CLIENT_ID: Tricentis_Cloud_API
-#   CLIENT_SECRET: qWofWKsmVxN_Cpp2nVxdiBIBO2-f49IEA2hubs3mQiNUWpnrTrTdG0Ferj74JZR0        # define as secret in the pipeline UI/library
+#   CLIENT_SECRET: US1-mNKGfkKH9LiaY_4VezHuGqnpIDXVuk9XcbXJvanjpXGGUcgWvrJeLMC_n82d        # define as secret in the pipeline UI/library
 #   E2G_SCOPE: tta
 #   E2G_AUTH_URL: https://presales.okta.com/oauth2/default/v1/token
 #   TOSCA_CLOUD_URL: https://presales.my.tricentis.com/5f1a8ab8-a188-4cb6-97b5-cc9b1cbe03d9
