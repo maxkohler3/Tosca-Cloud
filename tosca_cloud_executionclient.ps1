@@ -1,9 +1,9 @@
   pwsh ./Invoke-ToscaCloudPlaylist.ps1 `
-    -TokenUrl "https://amspresales.okta.com/oauth2/default/v1/token" `
+    -TokenUrl "https://presales.okta.com/oauth2/default/v1/token" `
     -ClientId "Tricentis_Cloud_API" `
-    -ClientSecret $env:xAIyVGZHX3yMw3FtMCV4oLtBmAETfdpJJOY-x4MbdTAq1aaUeZC6jZqblzgSv6VD `
+    -ClientSecret $env:US1-mNKGfkKH9LiaY_4VezHuGqnpIDXVuk9XcbXJvanjpXGGUcgWvrJeLMC_n82d `
     -Scope "tta" `
-    -TenantBaseUrl "https://amspresales.my.tricentis.com/8955895b-cacf-4695-a1bb-1210863f6212" `
+    -TenantBaseUrl "https://presales.my.tricentis.com/5f1a8ab8-a188-4cb6-97b5-cc9b1cbe03d9" `
     -PlaylistConfigFilePath "PlaylistConfig.json" `
     -ResultsFileName "results.xml" `
     -ResultsFolderPath "C:\Tricentis\Tosca\Results" `
